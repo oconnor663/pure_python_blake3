@@ -31,7 +31,7 @@ MSG_PERMUTATION = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8]
 
 
 def mask32(x):
-    a & 0xFFFFFFFF
+    return x & 0xFFFFFFFF
 
 
 def add32(x, y):
@@ -92,6 +92,8 @@ def compress(chaining_value, block_words, counter, block_len, flags):
         block_len,
         flags,
     ]
+
+    assert len(block_words) == 16
     block = list(block_words)
 
     round(state, block)  # round 1
@@ -117,7 +119,7 @@ def compress(chaining_value, block_words, counter, block_len, flags):
 
 def words_from_little_endian_bytes(b):
     assert len(b) % 4 == 0
-    return b"".join(int.from_bytes(b[i : i + 4] for i in range(0, len(b), 4)))
+    return [int.from_bytes(b[i : i + 4], "little") for i in range(0, len(b), 4)]
 
 
 # Each chunk or parent node can produce either an 8-word chaining value or, by
@@ -174,6 +176,7 @@ class ChunkState:
         self.chunk_counter = chunk_counter
         self.block = bytearray(BLOCK_LEN)
         self.block_len = 0
+        self.blocks_compressed = 0
         self.flags = flags
 
     def len(self):
@@ -214,8 +217,8 @@ class ChunkState:
         return Output(
             self.chaining_value,
             block_words,
-            self.block_len,
             self.chunk_counter,
+            self.block_len,
             self.flags | self.start_flag() | CHUNK_END,
         )
 
@@ -238,7 +241,6 @@ class Hasher:
     chunk_state: ChunkState
     key_words: list[int]
     cv_stack: list[list[int]]
-    cv_stack_len: int
     flags: int
 
     def _init(self, key_words, flags):
@@ -310,7 +312,7 @@ class Hasher:
         # parent chaining values along the right edge of the tree, until we
         # have the root Output.
         output = self.chunk_state.output()
-        parent_nodes_remaining = len(self.cv_stack_len)
+        parent_nodes_remaining = len(self.cv_stack)
         while parent_nodes_remaining > 0:
             parent_nodes_remaining -= 1
             output = parent_output(
