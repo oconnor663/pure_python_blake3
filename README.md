@@ -18,13 +18,13 @@ import pure_blake3
 
 hasher = pure_blake3.Hasher()
 hasher.update(b"foobarbaz")
-output1 = hasher.finalize(32)
+output1 = hasher.finalize()
 
 hasher = pure_blake3.Hasher()
 hasher.update(b"foo")
 hasher.update(b"bar")
 hasher.update(b"baz")
-output2 = hasher.finalize(32)
+output2 = hasher.finalize()
 
 assert output1 == output2
 ```

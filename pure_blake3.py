@@ -326,7 +326,7 @@ class Hasher:
             input_bytes = input_bytes[take:]
 
     # Finalize the hash and write any number of output bytes.
-    def finalize(self, length: int) -> bytes:
+    def finalize(self, length: int = OUT_LEN) -> bytes:
         # Starting with the Output from the current chunk, compute all the
         # parent chaining values along the right edge of the tree, until we
         # have the root Output.
