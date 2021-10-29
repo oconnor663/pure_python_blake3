@@ -16,15 +16,37 @@ derivation, and extendable output.
 ```python
 import pure_blake3
 
-hasher = pure_blake3.Hasher()
-hasher.update(b"foobarbaz")
-output1 = hasher.finalize()
+# regular hashing
+hasher1 = pure_blake3.Hasher()
+hasher1.update(b"foobarbaz")
+output1 = hasher1.finalize()
 
-hasher = pure_blake3.Hasher()
-hasher.update(b"foo")
-hasher.update(b"bar")
-hasher.update(b"baz")
-output2 = hasher.finalize()
+# regular hashing in multiple steps
+hasher2 = pure_blake3.Hasher()
+hasher2.update(b"foo")
+hasher2.update(b"bar")
+hasher2.update(b"baz")
+output2 = hasher2.finalize()
+assert output2 == output1
 
-assert output1 == output2
+# extendable output
+hasher3 = pure_blake3.Hasher()
+hasher3.update(b"foobarbaz")
+output3 = hasher3.finalize(100)
+assert output3[:32] == output2
+
+# keyed hashing
+import secrets
+random_key = secrets.token_bytes(32)
+message = b"a message to authenticate"
+keyed_hasher = pure_blake3.Hasher.new_keyed(random_key)
+keyed_hasher.update(message)
+mac = keyed_hasher.finalize()
+
+# key derivation
+context_string = "pure_blake3 2021-10-29 18:37:44 example context"
+key_material = b"usually at least 32 random bytes, not a password"
+kdf = pure_blake3.Hasher.new_derive_key(context_string)
+kdf.update(key_material)
+derived_key = kdf.finalize()
 ```
