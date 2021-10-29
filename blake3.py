@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 # This is a Python port of the Rust reference implementation of BLAKE3:
 # https://github.com/BLAKE3-team/BLAKE3/blob/master/reference_impl/reference_impl.rs
 
@@ -339,3 +341,13 @@ class Hasher:
                 self.flags,
             )
         return output.root_output_bytes(length)
+
+
+# If this file is executed directly, hash standard input.
+if __name__ == "__main__":
+    import sys
+
+    hasher = Hasher()
+    while buf := sys.stdin.buffer.read(65536):
+        hasher.update(buf)
+    print(hasher.finalize(OUT_LEN).hex())

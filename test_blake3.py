@@ -1,12 +1,17 @@
 import json
 from os import path
+import secrets
+import subprocess
+import sys
 
 from blake3 import Hasher
+
+HERE = path.dirname(__file__)
 
 
 def test_vectors() -> None:
 
-    with open(path.join(path.dirname(__file__), "test_vectors.json")) as f:
+    with open(path.join(HERE, "test_vectors.json")) as f:
         vectors = json.load(f)
 
     key = vectors["key"].encode("ascii")
@@ -34,3 +39,21 @@ def test_vectors() -> None:
         hasher = Hasher.new_derive_key(context_string)
         hasher.update(input_bytes)
         assert expected == hasher.finalize(len(expected))
+
+
+def test_execute() -> None:
+    input_bytes = secrets.token_bytes(100_000)
+
+    hasher = Hasher()
+    hasher.update(input_bytes)
+    expected = hasher.finalize(32).hex().encode("ascii")
+
+    blake3_py = path.join(HERE, "blake3.py")
+    result = subprocess.run(
+        [sys.executable, blake3_py],
+        capture_output=True,
+        check=True,
+        input=input_bytes,
+    )
+    assert result.stdout.strip() == expected
+    assert result.stderr == b""
