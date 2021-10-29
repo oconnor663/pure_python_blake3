@@ -350,4 +350,4 @@ if __name__ == "__main__":
     hasher = Hasher()
     while buf := sys.stdin.buffer.read(65536):
         hasher.update(buf)
-    print(hasher.finalize(OUT_LEN).hex())
+    print(hasher.finalize().hex())
