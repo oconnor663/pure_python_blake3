@@ -1,6 +1,7 @@
 # This is a Python port of the Rust reference implementation of BLAKE3:
 # https://github.com/BLAKE3-team/BLAKE3/blob/master/reference_impl/reference_impl.rs
 
+from __future__ import annotations
 from dataclasses import dataclass
 
 OUT_LEN = 32
