@@ -169,8 +169,8 @@ class ChunkState:
     blocks_compressed: int
     flags: int
 
-    def __init__(self, key: list[int], chunk_counter: int, flags: int):
-        self.chaining_value = key
+    def __init__(self, key_words: list[int], chunk_counter: int, flags: int):
+        self.chaining_value = key_words
         self.chunk_counter = chunk_counter
         self.block = bytearray(BLOCK_LEN)
         self.block_len = 0
@@ -220,26 +220,31 @@ class ChunkState:
         )
 
 
-def parent_output(left_child_cv, right_child_cv, key, flags):
-    return Output(key, left_child_cv + right_child_cv, 0, BLOCK_LEN, PARENT | flags)
+def parent_output(left_child_cv, right_child_cv, key_words, flags):
+    return Output(
+        key_words, left_child_cv + right_child_cv, 0, BLOCK_LEN, PARENT | flags
+    )
 
 
-def parent_cv(left_child_cv, right_child_cv, key, flags):
-    return parent_output(left_child_cv, right_child_cv, key, flags).chaining_value()
+def parent_cv(left_child_cv, right_child_cv, key_words, flags):
+    return parent_output(
+        left_child_cv, right_child_cv, key_words, flags
+    ).chaining_value()
 
 
 # An incremental hasher that can accept any number of writes.
 @dataclass
 class Hasher:
     chunk_state: ChunkState
-    key: list[int]
+    key_words: list[int]
     cv_stack: list[list[int]]
     cv_stack_len: int
     flags: int
 
-    def _init(key, flags):
-        self.chunk_state = ChunkState(key, 0, flags)
-        self.key = key
+    def _init(self, key_words, flags):
+        assert len(key_words) == 8
+        self.chunk_state = ChunkState(key_words, 0, flags)
+        self.key_words = key_words
         self.cv_stack = []
         self.flags = flags
 
@@ -251,7 +256,8 @@ class Hasher:
     @classmethod
     def new_keyed(cls, key):
         keyed_hasher = cls()
-        keyed_hasher._init(words_from_little_endian_bytes(key), KEYED_HASH)
+        key_words = words_from_little_endian_bytes(key)
+        keyed_hasher._init(key_words, KEYED_HASH)
         return keyed_hasher
 
     # Construct a new `Hasher` for the key derivation function. The context
@@ -277,7 +283,7 @@ class Hasher:
         # `new_cv` onto the stack. The number of completed subtrees is given
         # by the number of trailing 0-bits in the new total number of chunks.
         while total_chunks & 1 == 0:
-            new_cv = parent_cv(self.cv_stack.pop(), new_cv, self.key, self.flags)
+            new_cv = parent_cv(self.cv_stack.pop(), new_cv, self.key_words, self.flags)
             total_chunks >>= 1
         self.cv_stack.append(new_cv)
 
@@ -290,7 +296,7 @@ class Hasher:
                 chunk_cv = self.chunk_state.output().chaining_value()
                 total_chunks = self.chunk_state.chunk_counter + 1
                 self.add_chunk_chaining_value(chunk_cv, total_chunks)
-                self.chunk_state = ChunkState(self.key, total_chunks, self.flags)
+                self.chunk_state = ChunkState(self.key_words, total_chunks, self.flags)
 
             # Compress input bytes into the current chunk state.
             want = CHUNK_LEN - self.chunk_state.len()
@@ -310,7 +316,7 @@ class Hasher:
             output = parent_output(
                 self.cv_stack[parent_nodes_remaining],
                 output.chaining_value(),
-                self.key,
+                self.key_words,
                 self.flags,
             )
         return output.root_output_bytes(length)
