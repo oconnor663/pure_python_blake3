@@ -30,20 +30,20 @@ IV = [
 MSG_PERMUTATION = [2, 6, 3, 10, 7, 0, 4, 13, 1, 11, 12, 5, 9, 14, 15, 8]
 
 
-def mask32(x):
+def mask32(x: int) -> int:
     return x & 0xFFFFFFFF
 
 
-def add32(x, y):
+def add32(x: int, y: int) -> int:
     return mask32(x + y)
 
 
-def rightrotate32(x, n):
+def rightrotate32(x: int, n: int) -> int:
     return mask32(x << (32 - n)) | (x >> n)
 
 
 # The mixing function, G, which mixes either a column or a diagonal.
-def g(state, a, b, c, d, mx, my):
+def g(state: list[int], a: int, b: int, c: int, d: int, mx: int, my: int) -> None:
     state[a] = add32(state[a], add32(state[b], mx))
     state[d] = rightrotate32(state[d] ^ state[a], 16)
     state[c] = add32(state[c], state[d])
@@ -54,7 +54,7 @@ def g(state, a, b, c, d, mx, my):
     state[b] = rightrotate32(state[b] ^ state[c], 7)
 
 
-def round(state, m):
+def round(state: list[int], m: list[int]) -> None:
     # Mix the columns.
     g(state, 0, 4, 8, 12, m[0], m[1])
     g(state, 1, 5, 9, 13, m[2], m[3])
@@ -67,13 +67,19 @@ def round(state, m):
     g(state, 3, 4, 9, 14, m[14], m[15])
 
 
-def permute(m):
+def permute(m: list[int]) -> None:
     original = list(m)
     for i in range(16):
         m[i] = original[MSG_PERMUTATION[i]]
 
 
-def compress(chaining_value, block_words, counter, block_len, flags):
+def compress(
+    chaining_value: list[int],
+    block_words: list[int],
+    counter: int,
+    block_len: int,
+    flags: int,
+) -> list[int]:
     state = [
         chaining_value[0],
         chaining_value[1],
@@ -117,7 +123,7 @@ def compress(chaining_value, block_words, counter, block_len, flags):
     return state
 
 
-def words_from_little_endian_bytes(b):
+def words_from_little_endian_bytes(b: bytes) -> list[int]:
     assert len(b) % 4 == 0
     return [int.from_bytes(b[i : i + 4], "little") for i in range(0, len(b), 4)]
 
@@ -133,7 +139,7 @@ class Output:
     block_len: int
     flags: int
 
-    def chaining_value(self):
+    def chaining_value(self) -> list[int]:
         return compress(
             self.input_chaining_value,
             self.block_words,
@@ -142,7 +148,7 @@ class Output:
             self.flags,
         )[:8]
 
-    def root_output_bytes(self, length):
+    def root_output_bytes(self, length: int) -> bytes:
         output_bytes = bytearray()
         i = 0
         while i < length:
@@ -171,7 +177,7 @@ class ChunkState:
     blocks_compressed: int
     flags: int
 
-    def __init__(self, key_words: list[int], chunk_counter: int, flags: int):
+    def __init__(self, key_words: list[int], chunk_counter: int, flags: int) -> None:
         self.chaining_value = key_words
         self.chunk_counter = chunk_counter
         self.block = bytearray(BLOCK_LEN)
@@ -179,16 +185,16 @@ class ChunkState:
         self.blocks_compressed = 0
         self.flags = flags
 
-    def len(self):
+    def len(self) -> int:
         return BLOCK_LEN * self.blocks_compressed + self.block_len
 
-    def start_flag(self):
+    def start_flag(self) -> int:
         if self.blocks_compressed == 0:
             return CHUNK_START
         else:
             return 0
 
-    def update(self, input_bytes):
+    def update(self, input_bytes: bytes) -> None:
         while input_bytes:
             # If the block buffer is full, compress it and clear it. More
             # input_bytes is coming, so this compression is not CHUNK_END.
@@ -212,7 +218,7 @@ class ChunkState:
             self.block_len += take
             input_bytes = input_bytes[take:]
 
-    def output(self):
+    def output(self) -> Output:
         block_words = words_from_little_endian_bytes(self.block)
         return Output(
             self.chaining_value,
@@ -223,13 +229,23 @@ class ChunkState:
         )
 
 
-def parent_output(left_child_cv, right_child_cv, key_words, flags):
+def parent_output(
+    left_child_cv: list[int],
+    right_child_cv: list[int],
+    key_words: list[int],
+    flags: int,
+) -> Output:
     return Output(
         key_words, left_child_cv + right_child_cv, 0, BLOCK_LEN, PARENT | flags
     )
 
 
-def parent_cv(left_child_cv, right_child_cv, key_words, flags):
+def parent_cv(
+    left_child_cv: list[int],
+    right_child_cv: list[int],
+    key_words: list[int],
+    flags: int,
+) -> list[int]:
     return parent_output(
         left_child_cv, right_child_cv, key_words, flags
     ).chaining_value()
@@ -243,7 +259,7 @@ class Hasher:
     cv_stack: list[list[int]]
     flags: int
 
-    def _init(self, key_words, flags):
+    def _init(self, key_words: list[int], flags: int) -> None:
         assert len(key_words) == 8
         self.chunk_state = ChunkState(key_words, 0, flags)
         self.key_words = key_words
@@ -251,12 +267,12 @@ class Hasher:
         self.flags = flags
 
     # Construct a new `Hasher` for the regular hash function.
-    def __init__(self):
+    def __init__(self) -> None:
         self._init(IV, 0)
 
     # Construct a new `Hasher` for the keyed hash function.
     @classmethod
-    def new_keyed(cls, key):
+    def new_keyed(cls, key: bytes) -> Hasher:
         keyed_hasher = cls()
         key_words = words_from_little_endian_bytes(key)
         keyed_hasher._init(key_words, KEYED_HASH)
@@ -265,7 +281,7 @@ class Hasher:
     # Construct a new `Hasher` for the key derivation function. The context
     # string should be hardcoded, globally unique, and application-specific.
     @classmethod
-    def new_derive_key(cls, context):
+    def new_derive_key(cls, context: str) -> Hasher:
         context_hasher = cls()
         context_hasher._init(IV, DERIVE_KEY_CONTEXT)
         context_hasher.update(context.encode("utf8"))
@@ -276,7 +292,7 @@ class Hasher:
         return derive_key_hasher
 
     # Section 5.1.2 of the BLAKE3 spec explains this algorithm in more detail.
-    def add_chunk_chaining_value(self, new_cv, total_chunks):
+    def add_chunk_chaining_value(self, new_cv: list[int], total_chunks: int) -> None:
         # This chunk might complete some subtrees. For each completed subtree,
         # its left child will be the current top entry in the CV stack, and
         # its right child will be the current value of `new_cv`. Pop each left
@@ -290,7 +306,7 @@ class Hasher:
         self.cv_stack.append(new_cv)
 
     # Add input to the hash state. This can be called any number of times.
-    def update(self, input_bytes):
+    def update(self, input_bytes: bytes) -> None:
         while input_bytes:
             # If the current chunk is complete, finalize it and reset the
             # chunk state. More input is coming, so this chunk is not ROOT.
@@ -307,7 +323,7 @@ class Hasher:
             input_bytes = input_bytes[take:]
 
     # Finalize the hash and write any number of output bytes.
-    def finalize(self, length):
+    def finalize(self, length: int) -> bytes:
         # Starting with the Output from the current chunk, compute all the
         # parent chaining values along the right edge of the tree, until we
         # have the root Output.

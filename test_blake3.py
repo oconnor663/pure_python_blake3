@@ -4,7 +4,7 @@ from os import path
 from blake3 import Hasher
 
 
-def test_vectors():
+def test_vectors() -> None:
 
     with open(path.join(path.dirname(__file__), "test_vectors.json")) as f:
         vectors = json.load(f)
