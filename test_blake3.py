@@ -4,7 +4,7 @@ import secrets
 import subprocess
 import sys
 
-from blake3 import Hasher
+from pure_blake3 import Hasher
 
 HERE = path.dirname(__file__)
 
@@ -48,7 +48,7 @@ def test_execute() -> None:
     hasher.update(input_bytes)
     expected = hasher.finalize(32).hex().encode("ascii")
 
-    blake3_py = path.join(HERE, "blake3.py")
+    blake3_py = path.join(HERE, "pure_blake3.py")
     result = subprocess.run(
         [sys.executable, blake3_py],
         capture_output=True,
