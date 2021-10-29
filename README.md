@@ -4,4 +4,8 @@ This project is a pure Python implementations of the BLAKE3 cryptographic hash
 function, a direct port of the [Rust reference
 implementation](https://github.com/BLAKE3-team/BLAKE3/blob/master/reference_impl/reference_impl.rs).
 This is intended for educational and testing use only. It's too slow for
-production use, and it has not been audited.
+production use, and it hasn't been audited.
+
+If you're writing production Python code, see the
+[`blake3`](https://pypi.org/project/blake3/) module, which provides bindings
+for the high-performance Rust implementation.
