@@ -9,7 +9,7 @@ provides bindings for the high-performance Rust implementation.
 This a direct port of the [Rust reference
 implementation](https://github.com/BLAKE3-team/BLAKE3/blob/master/reference_impl/reference_impl.rs).
 It supports all the features of BLAKE3, including keyed hashing, key
-derivation, and extendable output.
+derivation, and extendable output. Python 3.8 or later is required.
 
 ## Examples
 
